@@ -4,8 +4,7 @@ import re
 from litellm import completion
 from app.database.models import SessionLocal, Document, Concept
 from app.database.vector import add_chunks_to_vector_db
-
-OLLAMA_API_BASE = os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
+from app.config import settings
 
 def extract_concepts_from_text(text_chunk: str) -> list[dict]:
     """Uses Local LLM to extract hierarchical concepts from a chunk of text."""
@@ -22,7 +21,7 @@ def extract_concepts_from_text(text_chunk: str) -> list[dict]:
     try:
         response = completion(
             model="ollama/llama3.1",
-            api_base=OLLAMA_API_BASE,
+            api_base=settings.OLLAMA_API_BASE,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=200,
             temperature=0.1

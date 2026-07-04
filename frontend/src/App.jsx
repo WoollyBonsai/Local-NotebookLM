@@ -193,6 +193,29 @@ function App() {
     setSelectedSources(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id])
   }
 
+  const [endpoint, setEndpoint] = useState("http://localhost:11434")
+
+  useEffect(() => {
+    // Fetch initial endpoint
+    fetch("http://localhost:8000/api/config/endpoint")
+      .then(res => res.json())
+      .then(data => setEndpoint(data.endpoint))
+      .catch(e => console.error(e))
+  }, [])
+
+  const handleUpdateEndpoint = async () => {
+    try {
+      await fetch("http://localhost:8000/api/config/endpoint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint })
+      })
+      alert("Endpoint updated successfully!")
+    } catch(e) {
+      alert("Failed to update endpoint.")
+    }
+  }
+
   return (
     <div className="app-container">
       <header className="header">
@@ -200,6 +223,16 @@ function App() {
         <div className="nav-menu">
           <button className={`nav-btn ${appMode === 'notebook' ? 'active' : ''}`} onClick={() => setAppMode('notebook')}>Notebook Mode</button>
           <button className={`nav-btn ${appMode === 'diary' ? 'active' : ''}`} onClick={() => setAppMode('diary')}>AI Diary Mode</button>
+        </div>
+        <div style={{display: "flex", gap: "0.5rem", alignItems: "center"}}>
+          <input 
+            type="text" 
+            value={endpoint} 
+            onChange={e => setEndpoint(e.target.value)} 
+            placeholder="LLM API Base"
+            style={{background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.1)", color: "white", padding: "0.5rem", borderRadius: "4px"}}
+          />
+          <button onClick={handleUpdateEndpoint} style={{background: "var(--accent)", color: "white", border: "none", padding: "0.5rem", borderRadius: "4px", cursor: "pointer"}}>Save Endpoint</button>
         </div>
       </header>
       

@@ -9,12 +9,24 @@ from pydantic import BaseModel
 from typing import List, Optional
 from fpdf import FPDF
 from fastapi.responses import FileResponse
+from app.config import settings
 
 router = APIRouter()
 
 UPLOAD_DIR = "uploaded_files"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-OLLAMA_API_BASE = os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
+
+class EndpointUpdate(BaseModel):
+    endpoint: str
+
+@router.get("/config/endpoint")
+def get_endpoint():
+    return {"endpoint": settings.OLLAMA_API_BASE}
+
+@router.post("/config/endpoint")
+def update_endpoint(req: EndpointUpdate):
+    settings.OLLAMA_API_BASE = req.endpoint
+    return {"message": "Endpoint updated", "endpoint": settings.OLLAMA_API_BASE}
 
 # --- NOTEBOOK & CHAT ENDPOINTS ---
 
@@ -159,9 +171,9 @@ async def query_tutor(request: QueryRequest):
     try:
         response = completion(
             model="ollama/llama3.1",
-            api_base=OLLAMA_API_BASE,
+            api_base=settings.OLLAMA_API_BASE,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=400
+            max_tokens=800
         )
         answer = response.choices[0].message.content.strip()
         final_ans = f"{answer}\n\n[Source: {citation_str}]"
@@ -187,6 +199,65 @@ def get_sources(notebook_id: Optional[int] = None):
     db.close()
     return {"sources": sources}
 
+class ActionRequest(BaseModel):
+    action_type: str
+    sources: Optional[List[int]] = None
+    notebook_id: Optional[int] = None
+
+@router.post("/action")
+async def predefined_action(request: ActionRequest):
+    db = SessionLocal()
+    concepts_query = db.query(Concept)
+    if request.sources:
+        concepts_query = concepts_query.filter(Concept.document_id.in_(request.sources))
+    elif request.notebook_id:
+        docs = db.query(Document).filter(Document.notebook_id == request.notebook_id).all()
+        doc_ids = [d.id for d in docs]
+        concepts_query = concepts_query.filter(Concept.document_id.in_(doc_ids))
+        
+    concepts = concepts_query.all()
+    
+    if not concepts:
+        db.close()
+        return {"response": "No concepts available for this action. Please upload and select a document."}
+
+    context = "\n".join([f"- {c.name}: {c.definition}" for c in concepts])
+    
+    if request.action_type == "report":
+        task = "Write a comprehensive summary report based on the following concepts."
+    elif request.action_type == "quiz":
+        task = "Generate a 3-question multiple choice quiz based on the following concepts. Include an answer key at the bottom."
+    elif request.action_type == "keywords":
+        task = "List all the key terms and provide a one-sentence simple definition for each based on the context."
+    else:
+        db.close()
+        return {"response": "Unknown action type"}
+        
+    prompt = f"""
+    You are EduGuard, an AI Tutor.
+    Task: {task}
+    
+    Context:
+    {context}
+    """
+    
+    try:
+        response = completion(
+            model="ollama/llama3.1",
+            api_base=settings.OLLAMA_API_BASE,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=800
+        )
+        ans = response.choices[0].message.content.strip()
+        if request.notebook_id:
+            db.add(ChatHistory(notebook_id=request.notebook_id, role="bot", text=ans))
+            db.commit()
+        db.close()
+        return {"response": ans}
+    except Exception as e:
+        db.close()
+        return {"response": f"Error performing action: {e}"}
+
 # --- DIARY ENDPOINTS ---
 
 class DiaryRequest(BaseModel):
@@ -201,7 +272,7 @@ async def add_diary_entry(req: DiaryRequest):
     User's entry: {req.text}
     """
     try:
-        resp = completion(model="ollama/llama3.1", api_base=OLLAMA_API_BASE, messages=[{"role": "user", "content": prompt_companion}], max_tokens=150)
+        resp = completion(model="ollama/llama3.1", api_base=settings.OLLAMA_API_BASE, messages=[{"role": "user", "content": prompt_companion}], max_tokens=150)
         companion_text = resp.choices[0].message.content.strip()
     except Exception:
         companion_text = "I'm here for you. Thank you for sharing."
@@ -212,7 +283,7 @@ async def add_diary_entry(req: DiaryRequest):
     Entry: {req.text}
     """
     try:
-        resp2 = completion(model="ollama/llama3.1", api_base=OLLAMA_API_BASE, messages=[{"role": "user", "content": prompt_synth}], max_tokens=50)
+        resp2 = completion(model="ollama/llama3.1", api_base=settings.OLLAMA_API_BASE, messages=[{"role": "user", "content": prompt_synth}], max_tokens=50)
         synth_text = resp2.choices[0].message.content.strip()
     except Exception:
         synth_text = "A reflective journal entry."
