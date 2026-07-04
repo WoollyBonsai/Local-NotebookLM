@@ -294,17 +294,17 @@ async def predefined_action(request: ActionRequest):
     context = "\n".join([f"- {c.name}: {c.definition}" for c in concepts])
     
     if request.action_type == "report":
-        task = "Write a comprehensive summary report based on the following concepts."
+        task = "Write a highly detailed, extremely comprehensive summary report based on the following concepts. Expand significantly on every point, providing examples and deep analysis where possible. The report should be lengthy and informative."
     elif request.action_type == "quiz":
-        task = "Generate a 3-question multiple choice quiz based on the following concepts. Include an answer key at the bottom."
+        task = "Generate a comprehensive 10-question multiple choice quiz based on the following concepts. Make the questions challenging. Include a detailed answer key at the bottom with explanations."
     elif request.action_type == "keywords":
-        task = "List all the key terms and provide a one-sentence simple definition for each based on the context."
+        task = "List all the key terms and provide a detailed, paragraph-long explanation for each based on the context."
     else:
         db.close()
         return {"response": "Unknown action type"}
         
     prompt = f"""
-    You are EduGuard, an AI Tutor.
+    You are EduGuard, an Expert AI Tutor.
     Task: {task}
     
     Context:
@@ -312,7 +312,7 @@ async def predefined_action(request: ActionRequest):
     """
     
     try:
-        response = call_llm(prompt, max_tokens=800)
+        response = call_llm(prompt, max_tokens=2500)
         ans = response.choices[0].message.content.strip()
         if request.notebook_id:
             db.add(ChatHistory(notebook_id=request.notebook_id, role="bot", text=ans))

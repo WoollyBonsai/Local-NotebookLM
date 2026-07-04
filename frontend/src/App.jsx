@@ -410,6 +410,12 @@ function App() {
                 placeholder="How are you feeling today? Write your journal entry..." 
                 value={diaryInput} 
                 onChange={e => setDiaryInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendDiary();
+                  }
+                }}
               />
               <button className="btn-send" onClick={handleSendDiary}>Save Entry</button>
             </div>
