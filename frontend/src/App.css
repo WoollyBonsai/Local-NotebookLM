@@ -20,14 +20,15 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  font-size: 1.05rem;
 }
 
 .app-container {
   display: flex;
   flex-direction: column;
-  width: 90vw;
-  max-width: 1300px;
-  height: 90vh;
+  width: 95vw;
+  max-width: 1600px;
+  height: 95vh;
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -45,7 +46,16 @@ body {
   align-items: center;
 }
 
-.header h1 { margin: 0; background: linear-gradient(to right, #a78bfa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header h1 { 
+  margin: 0; 
+  font-size: 3rem;
+  font-weight: 800;
+  background: linear-gradient(to right, #a78bfa, #c084fc); 
+  -webkit-background-clip: text; 
+  -webkit-text-fill-color: transparent; 
+  text-shadow: 0 0 20px rgba(167, 139, 250, 0.4);
+  letter-spacing: -1px;
+}
 
 .nav-menu { display: flex; gap: 1rem; }
 .nav-btn {
