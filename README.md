@@ -1,4 +1,4 @@
-# Local-NotebookLM (EduGuard Auto-Tutor)
+# Local-NotebookLM (MindVault Auto-Tutor)
 
 A privacy-first, anti-hallucination AI tutor designed to digest educational PDFs and provide reliable, grounded answers. Built as a Kaggle Capstone Project.
 
