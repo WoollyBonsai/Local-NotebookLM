@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pypdf2
+chromadb
+sqlalchemy
+litellm
+python-dotenv
+python-multipart
+networkx

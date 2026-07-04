@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+.env
+__pycache__/
+*.pyc
+venv/
+env/
+.pytest_cache/
+*.db
+*.sqlite
+*.sqlite3
+chroma_db/
+uploaded_files/
+.DS_Store
