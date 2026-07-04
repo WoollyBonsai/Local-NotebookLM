@@ -286,7 +286,7 @@ function App() {
     <div className="app-container">
       <header className="header" style={{flexDirection: "column", alignItems: "stretch", gap: "1rem"}}>
         <div style={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
-          <h1>EduGuard</h1>
+          <h1>MindVault</h1>
           <div className="nav-menu">
             <button className={`nav-btn ${appMode === 'notebook' ? 'active' : ''}`} onClick={() => setAppMode('notebook')}>Notebook Mode</button>
             <button className={`nav-btn ${appMode === 'diary' ? 'active' : ''}`} onClick={() => setAppMode('diary')}>AI Diary Mode</button>
@@ -380,7 +380,7 @@ function App() {
                   <div className="messages">
                     {nbMessages.map((msg, idx) => (
                       <div key={idx} className={`message ${msg.sender}`}>
-                        <strong>{msg.sender === 'user' ? 'You' : 'EduGuard'}:</strong> 
+                        <strong>{msg.sender === 'user' ? 'You' : 'MindVault'}:</strong> 
                         <ReactMarkdown>{msg.text}</ReactMarkdown>
                       </div>
                     ))}
@@ -415,7 +415,7 @@ function App() {
                   <div className="diary-meta">{new Date(e.created_at).toLocaleString()}</div>
                   <div className="diary-theme"><strong>Theme:</strong> {e.synthesized_text}</div>
                   <div className="diary-text"><strong>You:</strong> <ReactMarkdown>{e.raw_text}</ReactMarkdown></div>
-                  <div className="diary-response"><strong>EduGuard:</strong> <ReactMarkdown>{e.response_text}</ReactMarkdown></div>
+                  <div className="diary-response"><strong>MindVault:</strong> <ReactMarkdown>{e.response_text}</ReactMarkdown></div>
                 </div>
               ))}
               <div ref={diaryEndRef} />

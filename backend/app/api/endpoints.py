@@ -193,7 +193,7 @@ async def query_tutor(request: QueryRequest):
         history_context = "\n".join([f"{h.role}: {h.text}" for h in reversed(recent)])
 
     prompt = f"""
-    You are EduGuard, an AI Tutor. Answer the user's question using ONLY the provided context below.
+    You are MindVault, an AI Tutor. Answer the user's question using ONLY the provided context below.
     If the context does not contain the answer, explicitly state that you don't know based on the provided documents.
     
     Previous Chat Context:
@@ -306,7 +306,7 @@ async def predefined_action(request: ActionRequest):
         return {"response": "Unknown action type"}
         
     prompt = f"""
-    You are EduGuard, an Expert AI Tutor.
+    You are MindVault, an expert AI assistant.
     Task: {task}
     
     Context:
@@ -413,7 +413,7 @@ def export_diary():
         # AI Response
         pdf.set_font("Helvetica", "I", 10)
         pdf.set_text_color(50, 50, 150)
-        pdf.multi_cell(0, 6, f"EduGuard: {e.response_text}")
+        pdf.multi_cell(0, 6, f"MindVault: {e.response_text}")
         pdf.set_text_color(0, 0, 0)
         pdf.ln(5)
         
