@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 
 function App() {
@@ -7,6 +7,13 @@ function App() {
     { text: "Welcome to EduGuard Auto-Tutor! Upload a textbook to begin.", sender: "bot" }
   ])
   const [input, setInput] = useState("")
+
+  useEffect(() => {
+    // Clear the database when the page is refreshed
+    fetch("http://localhost:8000/api/clear", { method: "POST" })
+      .then(() => console.log("Databases cleared on load"))
+      .catch((e) => console.error("Could not clear DBs", e));
+  }, [])
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {

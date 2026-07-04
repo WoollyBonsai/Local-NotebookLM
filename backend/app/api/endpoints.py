@@ -1,9 +1,9 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException
 import shutil
 import os
 from app.agents.processor import process_pdf
-from app.database.vector import search_vector_db
-from app.database.models import SessionLocal, Concept
+from app.database.vector import search_vector_db, collection
+from app.database.models import SessionLocal, Concept, Document
 from litellm import completion
 
 router = APIRouter()
@@ -12,8 +12,29 @@ UPLOAD_DIR = "uploaded_files"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 OLLAMA_API_BASE = os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
 
+@router.post("/clear")
+def clear_databases():
+    db = SessionLocal()
+    try:
+        db.query(Concept).delete()
+        db.query(Document).delete()
+        db.commit()
+    except Exception:
+        pass
+    finally:
+        db.close()
+        
+    try:
+        existing_docs = collection.get()
+        if existing_docs and existing_docs['ids']:
+            collection.delete(ids=existing_docs['ids'])
+    except Exception:
+        pass
+        
+    return {"message": "Databases cleared"}
+
 @router.post("/upload")
-async def upload_pdf(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def upload_pdf(file: UploadFile = File(...)):
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
     
@@ -21,10 +42,10 @@ async def upload_pdf(background_tasks: BackgroundTasks, file: UploadFile = File(
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
-    # Trigger background task to parse PDF, chunk into ChromaDB, and build SQLite Graph
-    background_tasks.add_task(process_pdf, file_path, file.filename)
+    # Block until processing is finished so the user doesn't query an empty database!
+    process_pdf(file_path, file.filename)
     
-    return {"message": "File uploaded successfully", "filename": file.filename}
+    return {"message": "File uploaded and processed successfully", "filename": file.filename}
 
 @router.post("/query")
 async def query_tutor(query: str):
