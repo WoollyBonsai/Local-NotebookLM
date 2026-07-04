@@ -4,7 +4,7 @@ import os
 from app.agents.processor import process_pdf
 from app.database.vector import search_vector_db, collection
 from app.database.models import SessionLocal, Concept, Document, Notebook, ChatHistory, DiaryEntry
-from litellm import completion
+from app.llm import call_llm, update_models
 from pydantic import BaseModel
 from typing import List, Optional
 from fpdf import FPDF
@@ -31,6 +31,7 @@ def get_endpoint():
 def update_endpoint(req: EndpointUpdate):
     settings.LOCAL_LLM_ENDPOINT = req.local_endpoint
     settings.CLOUD_LLM_ENDPOINT = req.cloud_endpoint
+    update_models()
     return {"message": "Endpoints updated"}
 
 # --- NOTEBOOK & CHAT ENDPOINTS ---
@@ -205,12 +206,7 @@ async def query_tutor(request: QueryRequest):
     """
     
     try:
-        response = completion(
-            model="ollama/llama3.1",
-            api_base=settings.CLOUD_LLM_ENDPOINT if settings.CLOUD_LLM_ENDPOINT else settings.LOCAL_LLM_ENDPOINT,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=800
-        )
+        response = call_llm(prompt, max_tokens=800)
         answer = response.choices[0].message.content.strip()
         final_ans = f"{answer}\n\n[Source: {citation_str}]"
         
@@ -316,12 +312,7 @@ async def predefined_action(request: ActionRequest):
     """
     
     try:
-        response = completion(
-            model="ollama/llama3.1",
-            api_base=settings.CLOUD_LLM_ENDPOINT if settings.CLOUD_LLM_ENDPOINT else settings.LOCAL_LLM_ENDPOINT,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=800
-        )
+        response = call_llm(prompt, max_tokens=800)
         ans = response.choices[0].message.content.strip()
         if request.notebook_id:
             db.add(ChatHistory(notebook_id=request.notebook_id, role="bot", text=ans))
@@ -346,8 +337,7 @@ async def add_diary_entry(req: DiaryRequest):
     User's entry: {req.text}
     """
     try:
-        api_base = settings.CLOUD_LLM_ENDPOINT if settings.CLOUD_LLM_ENDPOINT else settings.LOCAL_LLM_ENDPOINT
-        resp = completion(model="ollama/llama3.1", api_base=api_base, messages=[{"role": "user", "content": prompt_companion}], max_tokens=150)
+        resp = call_llm(prompt_companion, max_tokens=150)
         companion_text = resp.choices[0].message.content.strip()
     except Exception:
         companion_text = "I'm here for you. Thank you for sharing."
@@ -358,7 +348,7 @@ async def add_diary_entry(req: DiaryRequest):
     Entry: {req.text}
     """
     try:
-        resp2 = completion(model="ollama/llama3.1", api_base=api_base, messages=[{"role": "user", "content": prompt_synth}], max_tokens=50)
+        resp2 = call_llm(prompt_synth, max_tokens=50)
         synth_text = resp2.choices[0].message.content.strip()
     except Exception:
         synth_text = "A reflective journal entry."

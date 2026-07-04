@@ -1,7 +1,7 @@
 import PyPDF2
 import os
 import re
-from litellm import completion
+from app.llm import call_llm
 from app.database.models import SessionLocal, Document, Concept
 from app.database.vector import add_chunks_to_vector_db
 from app.config import settings
@@ -19,14 +19,8 @@ def extract_concepts_from_text(text_chunk: str) -> list[dict]:
     """
     
     try:
-        api_base = settings.CLOUD_LLM_ENDPOINT if settings.CLOUD_LLM_ENDPOINT else settings.LOCAL_LLM_ENDPOINT
-        response = completion(
-            model="ollama/llama3.1",
-            api_base=api_base,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=200,
-            temperature=0.1
-        )
+        
+        response = call_llm(prompt, max_tokens=200, temperature=0.1)
         output = response.choices[0].message.content.strip()
         
         concepts = []
