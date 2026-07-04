@@ -241,13 +241,17 @@ function App() {
     setSelectedSources(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id])
   }
 
-  const [endpoint, setEndpoint] = useState("http://localhost:11434")
+  const [localEndpoint, setLocalEndpoint] = useState("http://localhost:11434")
+  const [cloudEndpoint, setCloudEndpoint] = useState("")
 
   useEffect(() => {
-    // Fetch initial endpoint
+    // Fetch initial endpoints
     fetch("http://localhost:8000/api/config/endpoint")
       .then(res => res.json())
-      .then(data => setEndpoint(data.endpoint))
+      .then(data => {
+        setLocalEndpoint(data.local_endpoint)
+        setCloudEndpoint(data.cloud_endpoint)
+      })
       .catch(e => console.error(e))
   }, [])
 
@@ -256,31 +260,40 @@ function App() {
       await fetch("http://localhost:8000/api/config/endpoint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endpoint })
+        body: JSON.stringify({ local_endpoint: localEndpoint, cloud_endpoint: cloudEndpoint })
       })
-      alert("Endpoint updated successfully!")
+      alert("Endpoints updated successfully!")
     } catch(e) {
-      alert("Failed to update endpoint.")
+      alert("Failed to update endpoints.")
     }
   }
 
   return (
     <div className="app-container">
-      <header className="header">
-        <h1>EduGuard</h1>
-        <div className="nav-menu">
-          <button className={`nav-btn ${appMode === 'notebook' ? 'active' : ''}`} onClick={() => setAppMode('notebook')}>Notebook Mode</button>
-          <button className={`nav-btn ${appMode === 'diary' ? 'active' : ''}`} onClick={() => setAppMode('diary')}>AI Diary Mode</button>
+      <header className="header" style={{flexDirection: "column", alignItems: "stretch", gap: "1rem"}}>
+        <div style={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
+          <h1>EduGuard</h1>
+          <div className="nav-menu">
+            <button className={`nav-btn ${appMode === 'notebook' ? 'active' : ''}`} onClick={() => setAppMode('notebook')}>Notebook Mode</button>
+            <button className={`nav-btn ${appMode === 'diary' ? 'active' : ''}`} onClick={() => setAppMode('diary')}>AI Diary Mode</button>
+          </div>
         </div>
-        <div style={{display: "flex", gap: "0.5rem", alignItems: "center"}}>
+        <div style={{display: "flex", gap: "0.5rem", alignItems: "center", alignSelf: "flex-end"}}>
           <input 
             type="text" 
-            value={endpoint} 
-            onChange={e => setEndpoint(e.target.value)} 
-            placeholder="LLM API Base"
-            style={{background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.1)", color: "white", padding: "0.5rem", borderRadius: "4px"}}
+            value={localEndpoint} 
+            onChange={e => setLocalEndpoint(e.target.value)} 
+            placeholder="Local LLM API (e.g. localhost:11434)"
+            style={{background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.1)", color: "white", padding: "0.5rem", borderRadius: "4px", width: "250px"}}
           />
-          <button onClick={handleUpdateEndpoint} style={{background: "var(--accent)", color: "white", border: "none", padding: "0.5rem", borderRadius: "4px", cursor: "pointer"}}>Save Endpoint</button>
+          <input 
+            type="text" 
+            value={cloudEndpoint} 
+            onChange={e => setCloudEndpoint(e.target.value)} 
+            placeholder="Cloud LLM API (e.g. Kaggle loca.lt)"
+            style={{background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.1)", color: "white", padding: "0.5rem", borderRadius: "4px", width: "250px"}}
+          />
+          <button onClick={handleUpdateEndpoint} style={{background: "var(--accent)", color: "white", border: "none", padding: "0.5rem", borderRadius: "4px", cursor: "pointer"}}>Save Config</button>
         </div>
       </header>
       

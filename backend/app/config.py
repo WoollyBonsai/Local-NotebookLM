@@ -1,5 +1,6 @@
 class Settings:
     def __init__(self):
-        self.OLLAMA_API_BASE = "http://localhost:11434"
+        self.LOCAL_LLM_ENDPOINT = "http://localhost:11434"
+        self.CLOUD_LLM_ENDPOINT = ""
 
 settings = Settings()

@@ -17,16 +17,21 @@ UPLOAD_DIR = "uploaded_files"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 class EndpointUpdate(BaseModel):
-    endpoint: str
+    local_endpoint: str
+    cloud_endpoint: str
 
 @router.get("/config/endpoint")
 def get_endpoint():
-    return {"endpoint": settings.OLLAMA_API_BASE}
+    return {
+        "local_endpoint": settings.LOCAL_LLM_ENDPOINT,
+        "cloud_endpoint": settings.CLOUD_LLM_ENDPOINT
+    }
 
 @router.post("/config/endpoint")
 def update_endpoint(req: EndpointUpdate):
-    settings.OLLAMA_API_BASE = req.endpoint
-    return {"message": "Endpoint updated", "endpoint": settings.OLLAMA_API_BASE}
+    settings.LOCAL_LLM_ENDPOINT = req.local_endpoint
+    settings.CLOUD_LLM_ENDPOINT = req.cloud_endpoint
+    return {"message": "Endpoints updated"}
 
 # --- NOTEBOOK & CHAT ENDPOINTS ---
 
@@ -202,7 +207,7 @@ async def query_tutor(request: QueryRequest):
     try:
         response = completion(
             model="ollama/llama3.1",
-            api_base=settings.OLLAMA_API_BASE,
+            api_base=settings.CLOUD_LLM_ENDPOINT if settings.CLOUD_LLM_ENDPOINT else settings.LOCAL_LLM_ENDPOINT,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=800
         )
@@ -313,7 +318,7 @@ async def predefined_action(request: ActionRequest):
     try:
         response = completion(
             model="ollama/llama3.1",
-            api_base=settings.OLLAMA_API_BASE,
+            api_base=settings.CLOUD_LLM_ENDPOINT if settings.CLOUD_LLM_ENDPOINT else settings.LOCAL_LLM_ENDPOINT,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=800
         )
@@ -341,7 +346,8 @@ async def add_diary_entry(req: DiaryRequest):
     User's entry: {req.text}
     """
     try:
-        resp = completion(model="ollama/llama3.1", api_base=settings.OLLAMA_API_BASE, messages=[{"role": "user", "content": prompt_companion}], max_tokens=150)
+        api_base = settings.CLOUD_LLM_ENDPOINT if settings.CLOUD_LLM_ENDPOINT else settings.LOCAL_LLM_ENDPOINT
+        resp = completion(model="ollama/llama3.1", api_base=api_base, messages=[{"role": "user", "content": prompt_companion}], max_tokens=150)
         companion_text = resp.choices[0].message.content.strip()
     except Exception:
         companion_text = "I'm here for you. Thank you for sharing."
@@ -352,7 +358,7 @@ async def add_diary_entry(req: DiaryRequest):
     Entry: {req.text}
     """
     try:
-        resp2 = completion(model="ollama/llama3.1", api_base=settings.OLLAMA_API_BASE, messages=[{"role": "user", "content": prompt_synth}], max_tokens=50)
+        resp2 = completion(model="ollama/llama3.1", api_base=api_base, messages=[{"role": "user", "content": prompt_synth}], max_tokens=50)
         synth_text = resp2.choices[0].message.content.strip()
     except Exception:
         synth_text = "A reflective journal entry."

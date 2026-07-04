@@ -19,9 +19,10 @@ def extract_concepts_from_text(text_chunk: str) -> list[dict]:
     """
     
     try:
+        api_base = settings.CLOUD_LLM_ENDPOINT if settings.CLOUD_LLM_ENDPOINT else settings.LOCAL_LLM_ENDPOINT
         response = completion(
             model="ollama/llama3.1",
-            api_base=settings.OLLAMA_API_BASE,
+            api_base=api_base,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=200,
             temperature=0.1
