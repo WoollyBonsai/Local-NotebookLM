@@ -131,6 +131,22 @@ function App() {
     }
   }
 
+  const handleAction = async (actionType) => {
+    if (!activeNotebook) return;
+    setNbMessages(prev => [...prev, { text: `Generating ${actionType}...`, sender: "bot" }]);
+    try {
+      const res = await fetch("http://localhost:8000/api/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action_type: actionType, sources: selectedSources })
+      });
+      const data = await res.json();
+      setNbMessages(prev => [...prev, { text: data.response, sender: "bot" }]);
+    } catch (error) {
+      setNbMessages(prev => [...prev, { text: "Error performing action.", sender: "bot" }]);
+    }
+  }
+
   // Diary Handlers
   const fetchDiaryHistory = async () => {
     try {
@@ -247,6 +263,11 @@ function App() {
                     {nbMessages.map((msg, idx) => (
                       <div key={idx} className={`message ${msg.sender}`}>{msg.text}</div>
                     ))}
+                  </div>
+                  <div className="quick-actions">
+                    <button className="btn-action" onClick={() => handleAction("report")}>Generate Report</button>
+                    <button className="btn-action" onClick={() => handleAction("quiz")}>Create Quiz</button>
+                    <button className="btn-action" onClick={() => handleAction("keywords")}>List Keywords</button>
                   </div>
                   <div className="input-area">
                     <input type="text" placeholder="Ask your notebook..." value={nbInput} onChange={e => setNbInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendNb()} />

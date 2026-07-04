@@ -18,10 +18,14 @@ def add_chunks_to_vector_db(filename: str, chunks: list[str], metadatas: list[di
         ids=ids
     )
 
-def search_vector_db(query: str, n_results: int = 3):
+def search_vector_db(query: str, n_results: int = 3, where: dict = None):
     """Searches the vector database for the query."""
-    results = collection.query(
-        query_texts=[query],
-        n_results=n_results
-    )
+    kwargs = {
+        "query_texts": [query],
+        "n_results": n_results
+    }
+    if where:
+        kwargs["where"] = where
+        
+    results = collection.query(**kwargs)
     return results
