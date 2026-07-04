@@ -219,7 +219,12 @@ function App() {
     setDiaryInput("");
     
     // Optimistic UI
-    const tempEntry = { text: text, response: "...", synth: "Synthesizing...", date: "Just now" };
+    const tempEntry = { 
+      raw_text: text, 
+      response_text: "...", 
+      synthesized_text: "Synthesizing...", 
+      created_at: new Date().toISOString() 
+    };
     setDiaryEntries(prev => [...prev, tempEntry]);
 
     try {

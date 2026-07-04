@@ -372,6 +372,10 @@ def get_diary_history():
     db.close()
     return {"entries": res}
 
+def safe_text(text: str) -> str:
+    if not text: return ""
+    return str(text).encode('latin-1', 'replace').decode('latin-1')
+
 @router.get("/diary/export")
 def export_diary():
     db = SessionLocal()
@@ -403,17 +407,17 @@ def export_diary():
         # Entry Time and Theme
         pdf.set_font("Helvetica", "I", 9)
         pdf.set_text_color(120, 120, 120)
-        pdf.multi_cell(0, 6, f"[{time_str}] Theme: {e.synthesized_text}")
+        pdf.multi_cell(0, 6, safe_text(f"[{time_str}] Theme: {e.synthesized_text}"))
         
         # User Message
         pdf.set_text_color(0, 0, 0)
         pdf.set_font("Helvetica", "", 10)
-        pdf.multi_cell(0, 6, f"You: {e.raw_text}")
+        pdf.multi_cell(0, 6, safe_text(f"You: {e.raw_text}"))
         
         # AI Response
         pdf.set_font("Helvetica", "I", 10)
         pdf.set_text_color(50, 50, 150)
-        pdf.multi_cell(0, 6, f"MindVault: {e.response_text}")
+        pdf.multi_cell(0, 6, safe_text(f"MindVault: {e.response_text}"))
         pdf.set_text_color(0, 0, 0)
         pdf.ln(5)
         
