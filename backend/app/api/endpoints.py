@@ -33,6 +33,9 @@ def update_endpoint(req: EndpointUpdate):
 class NotebookCreate(BaseModel):
     name: str
 
+class NameUpdate(BaseModel):
+    name: str
+
 @router.post("/notebooks")
 def create_notebook(req: NotebookCreate):
     db = SessionLocal()
@@ -50,6 +53,34 @@ def list_notebooks():
     res = [{"id": n.id, "name": n.name} for n in notebooks]
     db.close()
     return {"notebooks": res}
+
+@router.delete("/notebooks/{nb_id}")
+def delete_notebook(nb_id: int):
+    db = SessionLocal()
+    nb = db.query(Notebook).filter(Notebook.id == nb_id).first()
+    if nb:
+        # Delete from ChromaDB
+        for doc in nb.documents:
+            try:
+                res = collection.get(where={"filename": doc.filename})
+                if res and res["ids"]:
+                    collection.delete(ids=res["ids"])
+            except Exception:
+                pass
+        db.delete(nb)
+        db.commit()
+    db.close()
+    return {"message": "Notebook deleted"}
+
+@router.put("/notebooks/{nb_id}")
+def rename_notebook(nb_id: int, req: NameUpdate):
+    db = SessionLocal()
+    nb = db.query(Notebook).filter(Notebook.id == nb_id).first()
+    if nb:
+        nb.name = req.name
+        db.commit()
+    db.close()
+    return {"message": "Notebook renamed"}
 
 @router.get("/notebooks/{nb_id}/history")
 def get_chat_history(nb_id: int):
@@ -198,6 +229,44 @@ def get_sources(notebook_id: Optional[int] = None):
     sources = [{"id": d.id, "filename": d.filename} for d in docs]
     db.close()
     return {"sources": sources}
+
+@router.delete("/sources/{doc_id}")
+def delete_source(doc_id: int):
+    db = SessionLocal()
+    doc = db.query(Document).filter(Document.id == doc_id).first()
+    if doc:
+        try:
+            res = collection.get(where={"filename": doc.filename})
+            if res and res["ids"]:
+                collection.delete(ids=res["ids"])
+        except Exception:
+            pass
+        db.delete(doc)
+        db.commit()
+    db.close()
+    return {"message": "Source deleted"}
+
+@router.put("/sources/{doc_id}")
+def rename_source(doc_id: int, req: NameUpdate):
+    db = SessionLocal()
+    doc = db.query(Document).filter(Document.id == doc_id).first()
+    if doc:
+        old_filename = doc.filename
+        doc.filename = req.name
+        db.commit()
+        # Update Chroma metadata
+        try:
+            res = collection.get(where={"filename": old_filename})
+            if res and res["ids"]:
+                new_metadatas = []
+                for m in res["metadatas"]:
+                    m["filename"] = req.name
+                    new_metadatas.append(m)
+                collection.update(ids=res["ids"], metadatas=new_metadatas)
+        except Exception:
+            pass
+    db.close()
+    return {"message": "Source renamed"}
 
 class ActionRequest(BaseModel):
     action_type: str

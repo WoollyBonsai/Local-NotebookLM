@@ -90,6 +90,54 @@ function App() {
     }
   }
 
+  const handleDeleteNotebook = async (id, e) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this notebook and all its data?")) return;
+    try {
+      await fetch(`http://localhost:8000/api/notebooks/${id}`, { method: "DELETE" })
+      setNotebooks(notebooks.filter(n => n.id !== id))
+      if (activeNotebook === id) {
+        setActiveNotebook(null)
+        setNbMessages([])
+        setSources([])
+      }
+    } catch (e) { console.error(e) }
+  }
+
+  const handleRenameNotebook = async (id, e) => {
+    e.stopPropagation();
+    const newName = window.prompt("Enter new name:");
+    if (!newName) return;
+    try {
+      await fetch(`http://localhost:8000/api/notebooks/${id}`, { 
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newName }) 
+      })
+      setNotebooks(notebooks.map(n => n.id === id ? {...n, name: newName} : n))
+    } catch (e) { console.error(e) }
+  }
+
+  const handleDeleteSource = async (id, e) => {
+    e.stopPropagation();
+    if (!window.confirm("Delete this source?")) return;
+    try {
+      await fetch(`http://localhost:8000/api/sources/${id}`, { method: "DELETE" })
+      setSources(sources.filter(s => s.id !== id))
+      setSelectedSources(selectedSources.filter(sId => sId !== id))
+    } catch (e) { console.error(e) }
+  }
+
+  const handleRenameSource = async (id, e) => {
+    e.stopPropagation();
+    const newName = window.prompt("Enter new source name (keep .pdf extension if you wish):");
+    if (!newName) return;
+    try {
+      await fetch(`http://localhost:8000/api/sources/${id}`, { 
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newName }) 
+      })
+      setSources(sources.map(s => s.id === id ? {...s, filename: newName} : s))
+    } catch (e) { console.error(e) }
+  }
+
   // Notebook Handlers
   const handleUpload = async () => {
     if (!file || !activeNotebook) return;
@@ -138,7 +186,7 @@ function App() {
       const res = await fetch("http://localhost:8000/api/action", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action_type: actionType, sources: selectedSources })
+        body: JSON.stringify({ action_type: actionType, sources: selectedSources, notebook_id: activeNotebook })
       });
       const data = await res.json();
       setNbMessages(prev => [...prev, { text: data.response, sender: "bot" }]);
@@ -253,7 +301,11 @@ function App() {
                       className={`nb-item ${activeNotebook === nb.id ? 'active' : ''}`}
                       onClick={() => setActiveNotebook(nb.id)}
                     >
-                      {nb.name}
+                      <span className="nb-name">{nb.name}</span>
+                      <div className="item-actions">
+                        <button onClick={(e) => handleRenameNotebook(nb.id, e)}>✏️</button>
+                        <button onClick={(e) => handleDeleteNotebook(nb.id, e)}>🗑️</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -274,10 +326,16 @@ function App() {
                     <h3>Notebook Sources</h3>
                     <div style={{display: "flex", flexDirection: "column", gap: "0.5rem"}}>
                       {sources.map(source => (
-                        <label key={source.id} className="source-item">
-                          <input type="checkbox" checked={selectedSources.includes(source.id)} onChange={() => toggleSource(source.id)} />
-                          <span className="source-name">{source.filename}</span>
-                        </label>
+                        <div key={source.id} className="source-item">
+                          <label style={{display: "flex", gap: "0.5rem", flex: 1, alignItems: "center", cursor: "pointer"}}>
+                            <input type="checkbox" checked={selectedSources.includes(source.id)} onChange={() => toggleSource(source.id)} />
+                            <span className="source-name" title={source.filename}>{source.filename}</span>
+                          </label>
+                          <div className="item-actions">
+                            <button onClick={(e) => handleRenameSource(source.id, e)}>✏️</button>
+                            <button onClick={(e) => handleDeleteSource(source.id, e)}>🗑️</button>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
