@@ -299,6 +299,8 @@ async def predefined_action(request: ActionRequest):
         task = "Generate a comprehensive 10-question multiple choice quiz based on the following concepts. Make the questions challenging. Include a detailed answer key at the bottom with explanations."
     elif request.action_type == "keywords":
         task = "List all the key terms and provide a detailed, paragraph-long explanation for each based on the context."
+    elif request.action_type == "subjective":
+        task = "Generate exactly 5 complex, subjective essay-style questions based on the following concepts. These questions should test deep conceptual understanding. DO NOT provide any answers."
     else:
         db.close()
         return {"response": "Unknown action type"}

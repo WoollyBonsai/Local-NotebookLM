@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
 import './App.css'
 
 function App() {
@@ -244,6 +245,19 @@ function App() {
   const [localEndpoint, setLocalEndpoint] = useState("http://localhost:11434")
   const [cloudEndpoint, setCloudEndpoint] = useState("")
 
+  const chatEndRef = useRef(null);
+
+  // Auto-scroll for notebook chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [nbMessages])
+
+  // Auto-scroll for diary chat
+  const diaryEndRef = useRef(null);
+  useEffect(() => {
+    diaryEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [diaryEntries])
+
   useEffect(() => {
     // Fetch initial endpoints
     fetch("http://localhost:8000/api/config/endpoint")
@@ -365,13 +379,18 @@ function App() {
                 <>
                   <div className="messages">
                     {nbMessages.map((msg, idx) => (
-                      <div key={idx} className={`message ${msg.sender}`}>{msg.text}</div>
+                      <div key={idx} className={`message ${msg.sender}`}>
+                        <strong>{msg.sender === 'user' ? 'You' : 'EduGuard'}:</strong> 
+                        <ReactMarkdown>{msg.text}</ReactMarkdown>
+                      </div>
                     ))}
+                    <div ref={chatEndRef} />
                   </div>
                   <div className="quick-actions">
-                    <button className="btn-action" onClick={() => handleAction("report")}>Generate Report</button>
-                    <button className="btn-action" onClick={() => handleAction("quiz")}>Create Quiz</button>
-                    <button className="btn-action" onClick={() => handleAction("keywords")}>List Keywords</button>
+                    <button onClick={() => handleAction("report")}>Generate Report</button>
+                    <button onClick={() => handleAction("quiz")}>Create Quiz</button>
+                    <button onClick={() => handleAction("keywords")}>Key Terms</button>
+                    <button onClick={() => handleAction("subjective")}>Subjective Qs</button>
                   </div>
                   <div className="input-area">
                     <input type="text" placeholder="Ask your notebook..." value={nbInput} onChange={e => setNbInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendNb()} />
@@ -392,17 +411,14 @@ function App() {
             
             <div className="diary-entries">
               {diaryEntries.map((e, idx) => (
-                <div key={idx} className="diary-entry-card">
-                  <div className="diary-meta">
-                    <span className="diary-date">{e.date}</span>
-                    <span className="diary-synth">Theme: {e.synth}</span>
-                  </div>
-                  <div className="diary-text">{e.text}</div>
-                  <div className="diary-companion">
-                    <strong>Companion:</strong> {e.response}
-                  </div>
+                <div key={idx} className="diary-card">
+                  <div className="diary-meta">{new Date(e.created_at).toLocaleString()}</div>
+                  <div className="diary-theme"><strong>Theme:</strong> {e.synthesized_text}</div>
+                  <div className="diary-text"><strong>You:</strong> <ReactMarkdown>{e.raw_text}</ReactMarkdown></div>
+                  <div className="diary-response"><strong>EduGuard:</strong> <ReactMarkdown>{e.response_text}</ReactMarkdown></div>
                 </div>
               ))}
+              <div ref={diaryEndRef} />
             </div>
 
             <div className="diary-input-area">
