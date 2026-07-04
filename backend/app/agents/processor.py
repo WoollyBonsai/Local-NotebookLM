@@ -10,12 +10,13 @@ OLLAMA_API_BASE = os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
 def extract_concepts_from_text(text_chunk: str) -> list[dict]:
     """Uses Local LLM to extract hierarchical concepts from a chunk of text."""
     prompt = f"""
-    Extract the 2 most important educational concepts from the following textbook excerpt.
+    Extract the 2 most important specific entities, facts, or concepts from the following text.
+    CRITICAL: The definition MUST contain the actual specific details, facts, or data from the text itself, NOT a generic dictionary definition.
     Format your response EXACTLY as a list of concept-definition pairs, separated by pipes. Do not include any other text.
-    Format: Concept Name | A clear, factual definition
+    Format: Entity/Concept Name | Detailed factual explanation based on the text
     
     Excerpt:
-    {text_chunk[:1500]}
+    {text_chunk[:2000]}
     """
     
     try:
@@ -59,10 +60,10 @@ def process_pdf(filepath: str, filename: str):
     metadatas = []
     ids = []
     
-    print(f"Processing {len(reader.pages)} pages from {filename}...")
+    print(f"Processing pages from {filename}...")
     
-    # We process just the first 5 pages for demo speed to prevent extremely long extraction times
-    num_pages_to_process = min(len(reader.pages), 5)
+    # We process up to 20 pages for better coverage
+    num_pages_to_process = min(len(reader.pages), 20)
     
     for i in range(num_pages_to_process):
         page = reader.pages[i]
@@ -73,12 +74,15 @@ def process_pdf(filepath: str, filename: str):
         # Clean text
         text = re.sub(r'\s+', ' ', text).strip()
         
-        # Split into smaller chunks (naive chunking for now)
+        # Split into smaller chunks with overlap
         words = text.split()
-        chunk_size = 200
-        for j in range(0, len(words), chunk_size):
+        chunk_size = 400
+        for j in range(0, len(words), chunk_size - 50):
             chunk_text = ' '.join(words[j:j+chunk_size])
-            chunk_id = f"{filename}_p{i+1}_c{j//chunk_size}"
+            if len(chunk_text) < 50:
+                continue
+            
+            chunk_id = f"{filename}_p{i+1}_c{j//(chunk_size - 50)}"
             
             chunks.append(chunk_text)
             metadatas.append({"filename": filename, "page": i + 1})

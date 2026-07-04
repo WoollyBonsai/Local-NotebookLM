@@ -30,36 +30,49 @@ async def upload_pdf(background_tasks: BackgroundTasks, file: UploadFile = File(
 async def query_tutor(query: str):
     db = SessionLocal()
     
-    # Anti-Hallucination Guardrail: Attempt to find a relational concept matching the query terms
-    # For a real system we'd extract entities from the query first. For now, basic term matching.
-    query_terms = query.lower().split()
-    matched_concept = None
+    # 1. Smarter keyword matching: ignore common stop words
+    stop_words = {"what", "is", "the", "a", "an", "of", "in", "to", "for", "and", "about", "tell", "me", "how"}
+    query_terms = [t for t in query.lower().split() if t not in stop_words and len(t) > 2]
     
+    matched_concept = None
     concepts = db.query(Concept).all()
+    
+    # Find the concept with the most matching terms
+    best_match_score = 0
     for c in concepts:
-        if any(term in c.name.lower() for term in query_terms if len(term) > 4):
+        score = sum(1 for term in query_terms if term in c.name.lower())
+        if score > best_match_score:
+            best_match_score = score
             matched_concept = c
-            break
             
     db.close()
     
-    if not matched_concept:
-        # Fallback to vector search if no direct graph link found
-        vector_results = search_vector_db(query, n_results=2)
-        if not vector_results['documents'][0]:
-            return {"response": "I do not have enough verified context in my knowledge base to answer this securely. (Anti-Hallucination Guardrail Triggered)"}
-        context = "\n".join(vector_results['documents'][0])
-        citation = "Vector Search"
-    else:
-        context = f"Concept: {matched_concept.name}\nDefinition: {matched_concept.definition}"
-        citation = f"Document Page {matched_concept.page_number}"
+    context = ""
+    citations = []
+    
+    # 2. Add Graph Context if matched
+    if matched_concept:
+        context += f"Verified Concept: {matched_concept.name}\nFact/Definition: {matched_concept.definition}\n\n"
+        citations.append(f"Document Graph (Page {matched_concept.page_number})")
+        
+    # 3. Always add Vector Context for deeper details
+    vector_results = search_vector_db(query, n_results=3)
+    if vector_results and vector_results['documents'] and vector_results['documents'][0]:
+        vector_context = "\n---\n".join(vector_results['documents'][0])
+        context += f"Semantic Context:\n{vector_context}\n"
+        citations.append("Vector Search")
+        
+    if not context.strip():
+        return {"response": "I do not have enough verified context in my knowledge base to answer this securely. (Anti-Hallucination Guardrail Triggered)"}
+        
+    citation_str = " & ".join(citations)
 
     # Use LLM to synthesize answer
     prompt = f"""
-    You are EduGuard, an AI Tutor. Answer the user's question using ONLY the provided context.
-    If the context does not contain the answer, say you don't know.
+    You are EduGuard, an AI Tutor. Answer the user's question using ONLY the provided context below.
+    If the context does not contain the answer, explicitly state that you don't know based on the provided documents.
     
-    Context [{citation}]:
+    Context:
     {context}
     
     Question: {query}
@@ -70,10 +83,10 @@ async def query_tutor(query: str):
             model="ollama/llama3.1",
             api_base=OLLAMA_API_BASE,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=300
+            max_tokens=400
         )
         answer = response.choices[0].message.content.strip()
-        return {"response": f"{answer}\n\n[Source: {citation}]"}
+        return {"response": f"{answer}\n\n[Source: {citation_str}]"}
     except Exception as e:
         return {"response": f"Error synthesizing answer: {e}"}
 
