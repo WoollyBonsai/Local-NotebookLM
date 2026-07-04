@@ -368,7 +368,7 @@ async def add_diary_entry(req: DiaryRequest):
 def get_diary_history():
     db = SessionLocal()
     entries = db.query(DiaryEntry).order_by(DiaryEntry.created_at).all()
-    res = [{"id": e.id, "text": e.raw_text, "response": e.response_text, "synth": e.synthesized_text, "date": e.created_at.strftime("%Y-%m-%d %H:%M")} for e in entries]
+    res = [{"id": e.id, "raw_text": e.raw_text, "response_text": e.response_text, "synthesized_text": e.synthesized_text, "created_at": e.created_at.isoformat()} for e in entries]
     db.close()
     return {"entries": res}
 
