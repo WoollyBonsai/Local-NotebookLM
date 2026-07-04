@@ -380,24 +380,40 @@ def export_diary():
     pdf.add_page()
     
     # Title
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, "My Personal Diary Export", ln=True, align="C")
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.cell(0, 10, "My Personal Diary", ln=True, align="C")
     pdf.ln(10)
     
+    current_date = None
+    
     for e in entries:
-        pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(0, 10, f"Date: {e.created_at.strftime('%Y-%m-%d %H:%M')}", ln=True)
-        pdf.set_font("Helvetica", "I", 10)
-        pdf.multi_cell(0, 6, f"Theme: {e.synthesized_text}")
-        pdf.ln(2)
+        date_str = e.created_at.strftime('%A, %B %d, %Y')
+        time_str = e.created_at.strftime('%I:%M %p')
         
+        # New Date Header
+        if date_str != current_date:
+            current_date = date_str
+            pdf.set_font("Helvetica", "B", 14)
+            pdf.set_fill_color(240, 240, 250)
+            pdf.cell(0, 10, date_str, ln=True, fill=True)
+            pdf.ln(5)
+        
+        # Entry Time and Theme
+        pdf.set_font("Helvetica", "I", 9)
+        pdf.set_text_color(120, 120, 120)
+        pdf.multi_cell(0, 6, f"[{time_str}] Theme: {e.synthesized_text}")
+        
+        # User Message
+        pdf.set_text_color(0, 0, 0)
         pdf.set_font("Helvetica", "", 10)
-        pdf.multi_cell(0, 6, f"Entry: {e.raw_text}")
-        pdf.ln(5)
+        pdf.multi_cell(0, 6, f"You: {e.raw_text}")
         
+        # AI Response
         pdf.set_font("Helvetica", "I", 10)
-        pdf.multi_cell(0, 6, f"Companion: {e.response_text}")
-        pdf.ln(10)
+        pdf.set_text_color(50, 50, 150)
+        pdf.multi_cell(0, 6, f"EduGuard: {e.response_text}")
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(5)
         
     export_path = os.path.join(UPLOAD_DIR, "Diary_Export.pdf")
     pdf.output(export_path)
