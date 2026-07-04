@@ -24,3 +24,6 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "ok", "cloud_endpoint": os.getenv("OLLAMA_API_BASE", "Not Set")}
+
+from app.api.endpoints import router as api_router
+app.include_router(api_router, prefix="/api")
