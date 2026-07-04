@@ -7,12 +7,23 @@ function App() {
     { text: "Welcome to EduGuard Auto-Tutor! Upload a textbook to begin.", sender: "bot" }
   ])
   const [input, setInput] = useState("")
+  const [sources, setSources] = useState([])
+  const [selectedSources, setSelectedSources] = useState([])
+
+  const fetchSources = async () => {
+    try {
+      const response = await fetch("http://localhost:8000/api/sources")
+      const data = await response.json()
+      setSources(data.sources)
+      // Automatically select all new sources
+      setSelectedSources(data.sources.map(s => s.id))
+    } catch (e) {
+      console.error("Could not fetch sources", e)
+    }
+  }
 
   useEffect(() => {
-    // Clear the database when the page is refreshed
-    fetch("http://localhost:8000/api/clear", { method: "POST" })
-      .then(() => console.log("Databases cleared on load"))
-      .catch((e) => console.error("Could not clear DBs", e));
+    fetchSources()
   }, [])
 
   const handleFileChange = (e) => {
@@ -27,7 +38,7 @@ function App() {
     const formData = new FormData();
     formData.append("file", file);
 
-    setMessages([...messages, { text: `Uploading and analyzing ${file.name}...`, sender: "bot" }])
+    setMessages([...messages, { text: `Uploading and analyzing ${file.name}... this may take a minute.`, sender: "bot" }])
 
     try {
       const response = await fetch("http://localhost:8000/api/upload", {
@@ -35,9 +46,10 @@ function App() {
         body: formData,
       });
       const data = await response.json();
-      setMessages(prev => [...prev, { text: `Successfully processed ${data.filename}! You can now ask questions about it.`, sender: "bot" }]);
+      setMessages(prev => [...prev, { text: `Successfully processed ${data.filename}!`, sender: "bot" }]);
+      fetchSources();
     } catch (error) {
-      setMessages(prev => [...prev, { text: "Failed to upload file. Make sure the backend is running.", sender: "bot" }]);
+      setMessages(prev => [...prev, { text: "Failed to upload file.", sender: "bot" }]);
     }
   }
 
@@ -50,8 +62,10 @@ function App() {
     setInput("");
 
     try {
-      const response = await fetch(`http://localhost:8000/api/query?query=${encodeURIComponent(query)}`, {
-        method: "POST"
+      const response = await fetch("http://localhost:8000/api/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: query, sources: selectedSources.length > 0 ? selectedSources : null })
       });
       const data = await response.json();
       setMessages(prev => [...prev, { text: data.response, sender: "bot" }]);
@@ -60,11 +74,46 @@ function App() {
     }
   }
 
+  const handleAction = async (actionType) => {
+    setMessages(prev => [...prev, { text: `Generating ${actionType}...`, sender: "bot" }]);
+    try {
+      const response = await fetch("http://localhost:8000/api/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action_type: actionType, sources: selectedSources.length > 0 ? selectedSources : null })
+      });
+      const data = await response.json();
+      setMessages(prev => [...prev, { text: data.response, sender: "bot" }]);
+    } catch (error) {
+      setMessages(prev => [...prev, { text: "Error performing action.", sender: "bot" }]);
+    }
+  }
+
+  const clearMemory = async () => {
+    try {
+      await fetch("http://localhost:8000/api/clear", { method: "POST" })
+      setMessages([{ text: "Memory wiped. Upload a new textbook to begin.", sender: "bot" }])
+      setSources([])
+      setSelectedSources([])
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const toggleSource = (id) => {
+    setSelectedSources(prev => 
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    )
+  }
+
   return (
     <div className="app-container">
       <header className="header">
         <h1>EduGuard</h1>
-        <div style={{ color: "var(--text-secondary)" }}>Privacy-First Auto-Tutor</div>
+        <div style={{ color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "1rem" }}>
+          <span>Privacy-First Auto-Tutor</span>
+          <button className="btn-clear" onClick={clearMemory}>Clean Memory</button>
+        </div>
       </header>
       
       <main className="main-content">
@@ -80,11 +129,24 @@ function App() {
             </button>
           </div>
           
-          <div className="graph-preview" style={{marginTop: "2rem", flex: 1, borderTop: "1px solid var(--glass-border)", paddingTop: "1rem"}}>
-            <h3>Concept Graph</h3>
-            <div style={{ color: "var(--text-secondary)", fontSize: "0.9rem", textAlign: "center", marginTop: "2rem" }}>
-              Upload a document to build the relational knowledge graph.
-            </div>
+          <div className="sources-list" style={{marginTop: "1.5rem", flex: 1, overflowY: "auto"}}>
+            <h3>Active Sources</h3>
+            {sources.length === 0 ? (
+              <div style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>No sources uploaded yet.</div>
+            ) : (
+              <div style={{display: "flex", flexDirection: "column", gap: "0.5rem"}}>
+                {sources.map(source => (
+                  <label key={source.id} className="source-item">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedSources.includes(source.id)} 
+                      onChange={() => toggleSource(source.id)} 
+                    />
+                    <span className="source-name">{source.filename}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         </aside>
         
@@ -95,6 +157,12 @@ function App() {
                 {msg.text}
               </div>
             ))}
+          </div>
+
+          <div className="quick-actions">
+            <button className="btn-action" onClick={() => handleAction("report")}>Generate Report</button>
+            <button className="btn-action" onClick={() => handleAction("quiz")}>Create Quiz</button>
+            <button className="btn-action" onClick={() => handleAction("keywords")}>List Keywords</button>
           </div>
           
           <div className="input-area">
